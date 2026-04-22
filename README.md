@@ -1,44 +1,24 @@
 # Copilot Notifier
 
-Audio notifications for [GitHub Copilot CLI](https://docs.github.com/en/copilot). Plays distinct sounds when Copilot finishes work, needs your input, or encounters an error. Step away from the screen and let the sound tell you when to come back.
+> Stop staring at the terminal. Let it yell at you instead.
 
-https://github.com/user-attachments/assets/placeholder
+Audio notifications for [GitHub Copilot CLI](https://docs.github.com/en/copilot). Plays sounds when Copilot finishes work, needs your input, or breaks something. Go grab coffee. The robot will call you back.
 
 ## Features
 
-- **4 built-in themes**: Classic (system chimes), Robot, Movie, Hype (TTS voices)
-- **Automatic sounds**: Plays when Copilot asks a question, finishes a task, completes a session, or hits an error
-- **Permission prompt detection**: Alerts you when Copilot is waiting for native tool permission (bash, edit, etc.)
-- **Persistent config**: Theme choice survives across sessions. No re-setup needed.
-- **Cross-platform**: macOS (`afplay`/`say`) and Linux (`paplay`/`espeak-ng`)
-- **Zero dependencies**: Uses only system audio tools. Nothing to install.
+- **4 themes**: Classic (system chimes), Robot ("Task complete, human"), Movie ("Houston, we have a problem"), Hype ("Boom, done")
+- **Automatic**: Sounds play when Copilot asks questions, finishes tasks, wraps up sessions, or hits errors
+- **Permission alerts**: Hear a sound when Copilot is stuck waiting for you to click "Allow"
+- **Remembers you**: Theme choice persists across sessions. Set it once, forget about it.
+- **Cross-platform**: macOS and Linux. Zero dependencies. Uses your system's built-in audio.
 
 ## Install
 
-### Option A: Global (all repos)
-
 ```bash
-mkdir -p ~/.copilot/extensions/copilot-notifier
-curl -fsSL https://raw.githubusercontent.com/godilite/copilot-notifier/main/extension.mjs \
-  -o ~/.copilot/extensions/copilot-notifier/extension.mjs
+npx copilot-notifier
 ```
 
-Or clone:
-
-```bash
-git clone https://github.com/godilite/copilot-notifier.git \
-  ~/.copilot/extensions/copilot-notifier
-```
-
-### Option B: Per-project
-
-```bash
-mkdir -p .github/extensions/copilot-notifier
-curl -fsSL https://raw.githubusercontent.com/godilite/copilot-notifier/main/extension.mjs \
-  -o .github/extensions/copilot-notifier/extension.mjs
-```
-
-### Verify
+That's it. The extension is copied to `~/.copilot/extensions/copilot-notifier/` and works across all your repos.
 
 Restart Copilot CLI (or run `/clear`). You should see:
 
@@ -46,75 +26,105 @@ Restart Copilot CLI (or run `/clear`). You should see:
 Notifier available. Say 'switch theme' to pick a sound theme.
 ```
 
+### Other install methods
+
+<details>
+<summary>npm global install</summary>
+
+```bash
+npm install -g copilot-notifier
+copilot-notifier
+```
+</details>
+
+<details>
+<summary>curl (no npm needed)</summary>
+
+```bash
+mkdir -p ~/.copilot/extensions/copilot-notifier
+curl -fsSL https://raw.githubusercontent.com/godilite/copilot-notifier/main/extension.mjs \
+  -o ~/.copilot/extensions/copilot-notifier/extension.mjs
+```
+</details>
+
+<details>
+<summary>git clone</summary>
+
+```bash
+git clone https://github.com/godilite/copilot-notifier.git \
+  ~/.copilot/extensions/copilot-notifier
+```
+</details>
+
+<details>
+<summary>Per-project (team setup)</summary>
+
+```bash
+mkdir -p .github/extensions/copilot-notifier
+curl -fsSL https://raw.githubusercontent.com/godilite/copilot-notifier/main/extension.mjs \
+  -o .github/extensions/copilot-notifier/extension.mjs
+git add .github/extensions/copilot-notifier
+```
+
+Everyone who clones the repo gets the extension automatically.
+</details>
+
 ## Usage
 
-### Pick a theme
+### Pick your vibe
 
 Say `switch theme` or `change sounds` in any Copilot CLI session.
 
-| Theme | Style | Requires |
-|-------|-------|----------|
-| **classic** | System chimes (Glass, Ping, Hero, Basso) | Nothing extra |
-| **robot** | Sci-fi robot voice ("Task complete, human") | `say` (macOS) or `espeak-ng` (Linux) |
-| **movie** | Dramatic callouts ("Houston, we have a problem") | `say` (macOS) or `espeak-ng` (Linux) |
-| **hype** | Over-the-top energy ("Boom, done") | `say` (macOS) or `espeak-ng` (Linux) |
+| Theme | Personality | What you'll hear |
+|-------|------------|------------------|
+| **classic** | Clean, professional | System chimes (Glass, Ping, Hero, Basso) |
+| **robot** | Sci-fi overlord | "Human, your input is required" |
+| **movie** | Dramatic narrator | "Houston, we have a problem" |
+| **hype** | Your biggest fan | "Boom, done" |
 
-### When sounds play
+TTS themes need `say` (macOS, built-in) or `espeak-ng` (Linux, `apt install espeak-ng`).
 
-| Sound | When |
-|-------|------|
-| **Attention** | Copilot asks you a question or waits for permission |
-| **Complete** | A task finishes |
-| **Session** | All work for your request is done |
-| **Error** | Something failed |
+### What triggers sounds
 
-### Commands
+| Sound | Trigger |
+|-------|---------|
+| 🔔 **Attention** | Copilot asks you something or waits for permission |
+| ✅ **Complete** | A task finishes |
+| 🎬 **Session** | All work is done |
+| 💥 **Error** | Something went wrong |
 
-- `switch theme` / `change sounds` - pick a different theme
-- The extension remembers your choice across sessions
+## Under the hood
 
-## How it works
+Two tools, three hooks. That's the whole extension.
 
-The extension registers two tools and three hooks with Copilot CLI:
+**Tools** the agent calls:
+- `notifier_play` - fires alongside `ask_user` or at task boundaries (runs silently, no permission prompt)
+- `switch_sound_theme` - switches theme, regenerates TTS audio, saves config
 
-**Tools:**
-- `notifier_play` - Copilot calls this alongside `ask_user` or at task boundaries
-- `switch_sound_theme` - Switches between themes and regenerates TTS audio
+**Hooks** that run automatically:
+- `onSessionStart` - loads your saved theme from `~/.copilot-notifier/config.json`
+- `onPreToolUse` - starts a 3s timer before every tool
+- `onPostToolUse` - cancels the timer. If the timer fires first, Copilot was stuck on a permission dialog, so it plays the attention sound. Sneaky.
 
-**Hooks:**
-- `onSessionStart` - Auto-resumes from saved config (`~/.copilot-notifier/config.json`)
-- `onPreToolUse` - Starts a 3-second timer before each tool execution
-- `onPostToolUse` - Cancels the timer if the tool completes (no permission prompt). If the timer fires, Copilot was blocked on a permission dialog, and the attention sound plays.
-
-TTS themes pre-generate `.aiff` (macOS) or `.wav` (Linux) files to `~/.copilot-notifier/` on first use, then play the cached files for instant playback.
+TTS themes generate `.aiff`/`.wav` files once and cache them at `~/.copilot-notifier/`.
 
 ## Platform support
 
-| Platform | Audio player | TTS engine | Status |
-|----------|-------------|------------|--------|
-| macOS | `afplay` | `say` | Full support |
-| Linux | `paplay` / `aplay` | `espeak-ng` / `espeak` | Full support |
-| Windows (WSL) | Via Linux tools | Via Linux tools | Should work |
-| CI / headless | - | - | Silently skipped |
+| Platform | Player | TTS | Works? |
+|----------|--------|-----|--------|
+| macOS | `afplay` | `say` | ✅ Yes |
+| Linux | `paplay` / `aplay` | `espeak-ng` | ✅ Yes |
+| WSL | Linux tools | Linux tools | ✅ Probably |
+| CI / headless | - | - | 🤷 Silently skipped |
 
-## Configuration
+## Files on disk
 
-Config is stored at `~/.copilot-notifier/config.json`:
-
-```json
-{
-  "theme": "movie",
-  "platform": "darwin",
-  "player": "afplay"
-}
-```
-
-Generated sound files are cached at `~/.copilot-notifier/`:
+Config lives at `~/.copilot-notifier/`:
 
 ```
 ~/.copilot-notifier/
-  config.json
-  attention.aiff
+  config.json        ← your theme choice
+  attention.aiff     ← cached TTS audio (generated once)
   complete.aiff
   session.aiff
   error.aiff
@@ -123,14 +133,8 @@ Generated sound files are cached at `~/.copilot-notifier/`:
 ## Uninstall
 
 ```bash
-rm -rf ~/.copilot/extensions/copilot-notifier
+npx copilot-notifier uninstall
 rm -rf ~/.copilot-notifier
-```
-
-Or for per-project:
-
-```bash
-rm -rf .github/extensions/copilot-notifier
 ```
 
 ## License

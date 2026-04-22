@@ -1,0 +1,34 @@
+{
+  "name": "copilot-notifier",
+  "version": "1.0.0",
+  "description": "Audio notifications for GitHub Copilot CLI. 4 themes, permission prompt detection, cross-platform.",
+  "type": "module",
+  "bin": {
+    "copilot-notifier": "bin/cli.mjs"
+  },
+  "files": [
+    "extension.mjs",
+    "bin/cli.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "copilot",
+    "github-copilot",
+    "copilot-cli",
+    "notifications",
+    "audio",
+    "extension",
+    "productivity"
+  ],
+  "author": "Godwin Asuquo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/godilite/copilot-notifier.git"
+  },
+  "homepage": "https://github.com/godilite/copilot-notifier#readme",
+  "engines": {
+    "node": ">=18"
+  }
+}
